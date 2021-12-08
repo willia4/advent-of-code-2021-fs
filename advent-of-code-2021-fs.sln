@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "day1", "day1\day1.fsproj", "{49AF00C8-66BB-46AB-8BBD-655CE6B7C8A7}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "CommonHelpers", "CommonHelpers\CommonHelpers.fsproj", "{E0E16685-EA51-4AE3-B7F5-22E5240E444F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49AF00C8-66BB-46AB-8BBD-655CE6B7C8A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49AF00C8-66BB-46AB-8BBD-655CE6B7C8A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49AF00C8-66BB-46AB-8BBD-655CE6B7C8A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49AF00C8-66BB-46AB-8BBD-655CE6B7C8A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0E16685-EA51-4AE3-B7F5-22E5240E444F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0E16685-EA51-4AE3-B7F5-22E5240E444F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0E16685-EA51-4AE3-B7F5-22E5240E444F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0E16685-EA51-4AE3-B7F5-22E5240E444F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
