@@ -5,46 +5,62 @@ let readInput path =
     |> Array.map CommonHelpers.Helpers.safeParseInt
     |> Array.toSeq
     
+let slidingWindows (windowSize: int) (items: seq<'a>) : seq<seq<'a>> = seq{
+    let buffer = ResizeArray<'a>(windowSize)
+    
+    for x in items do
+        if buffer.Count = windowSize then
+            yield (Seq.toList buffer)
+            buffer.RemoveAt(0)
+        else ()
+        buffer.Add(x)
+
+    if buffer.Count > 0 then yield (Seq.toList buffer) else ()
+}
+    
+    
 let countIncreases (chunks: seq<seq<int>>): int =
-    let chunks = chunks |> Seq.map (Seq.sum)
-    printfn $"%A{chunks}"
-    if (chunks |> Seq.length) >= 2 then
+    let chunks = chunks |> Seq.map (Seq.sum) |> Seq.toList
+
+    if (chunks |> List.length) >= 2 then
         let rec inner prev rest acc =
-            if (rest |> Seq.isEmpty |> not) then
-               let current = rest |> Seq.head
-               inner current (rest |> Seq.skip 1) (if current > prev then acc + 1 else acc)
-            else
-                acc
+            match rest with
+            | head :: tail -> inner head tail (if head > prev then acc + 1 else acc)
+            | _ -> acc
         
-        inner (chunks |> Seq.head) (chunks |> Seq.skip 1) 0
+        inner (chunks |> List.head) (chunks |> List.tail) 0
     else
         0
     
 let part1 (path:string) : unit =
-    let inputs = path
+    let increases = path
                  |> readInput
-                 |> Seq.chunkBySize 1
-                 |> Seq.map (Array.toSeq)
+                 |> slidingWindows 1
                  |> countIncreases
     
-    printfn "%s" "Part 1"
-    printfn $"%s{path}"
-    printfn $"%d{inputs}"
+    printfn  " │ "
+    printfn  " │ Part 1: "
+    printfn $" │ %s{path}"
+    printfn  " │ "
+    printfn $" │ Number of increases: %d{ increases }"
+    printfn  " └────────────"   
    
 let part2 (path:string) : unit =
-    let inputs = path
+    let increases = path
                  |> readInput
-                 |> Seq.chunkBySize 3
-                 |> Seq.map (Array.toSeq)
+                 |> slidingWindows 3
                  |> countIncreases
     
-    printfn "%s" "Part 2"
-    printfn $"%s{path}"
-    printfn $"%d{inputs}" 
+    printfn  " │ "
+    printfn  " │ Part 2: "
+    printfn $" │ %s{path}"
+    printfn  " │ "
+    printfn $" │ Number of increases: %d{ increases }"
+    printfn  " └────────────"   
     
     
-//part1 "test_input.txt"
-//part1 "input.txt"
+part1 "test_input.txt"
+part1 "input.txt"
 
 part2 "test_input.txt"
-//part2  "input.txt"
+part2  "input.txt"
