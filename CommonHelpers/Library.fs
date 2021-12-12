@@ -1,7 +1,8 @@
 ﻿namespace CommonHelpers
 
 module Helpers =
-        
+    let fst3 (a, _, _) = a
+
     let safeParseInt (s:string) =
         match System.Int32.TryParse s with
         | true, int -> int
