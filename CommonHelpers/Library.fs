@@ -23,6 +23,11 @@ module Helpers =
     
     let splitBy (sep: string) (s: string) = s.Split(sep)
 
+    let split (s: string) = s.Split()
+
+    let stringToUpper (s: string) = s.ToUpperInvariant()
+    let stringToLower (s: string) = s.ToLowerInvariant()
+
     let countOccurrences (values: seq<'a>) =
         values |> Seq.fold (fun (acc: Map<'a, int>) next ->
             acc |> Map.change next (fun c ->
