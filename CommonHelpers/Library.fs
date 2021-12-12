@@ -1,7 +1,7 @@
 ﻿namespace CommonHelpers
 
 module Helpers =
-    
+        
     let safeParseInt (s:string) =
         match System.Int32.TryParse s with
         | true, int -> int
@@ -14,7 +14,15 @@ module Helpers =
     
     let reverseString (s:string) =
         new string(s.ToCharArray() |> Array.rev)
-        
+
+    let trimString (s:string) = s.Trim()
+            
+    let stringIsEmpty (s:string) = System.String.IsNullOrWhiteSpace(s)
+    
+    let stringNotEmpty = stringIsEmpty >> not
+    
+    let splitBy (sep: string) (s: string) = s.Split(sep)
+
     let countOccurrences (values: seq<'a>) =
         values |> Seq.fold (fun (acc: Map<'a, int>) next ->
             acc |> Map.change next (fun c ->
