@@ -35,3 +35,10 @@ module Helpers =
                     match c with
                     | Some v -> Some (v + 1)
                     | None -> Some (1))) Map.empty
+
+    let countSeq = seq {
+        let mutable i = 0
+        while true do
+            yield i
+            i <- i + 1
+    }

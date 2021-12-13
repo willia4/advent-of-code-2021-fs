@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.fs" />
+    <Content Include="test_input0.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommonHelpers\CommonHelpers.fsproj" />
+  </ItemGroup>
+
+</Project>
