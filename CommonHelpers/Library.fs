@@ -60,3 +60,19 @@ module Helpers =
         else ()
     }
         
+    let seqAsSlidingWindow windowSize (items: 'a seq) = seq {
+        let currentChunk = new ResizeArray<'a>()
+        
+        for i in items do
+            if (currentChunk.Count = windowSize) then
+                yield currentChunk |> Seq.toList |> Seq.ofList
+                currentChunk.RemoveAt(0)
+            else ()
+            
+            currentChunk.Add(i)
+            
+        if (currentChunk.Count = windowSize) then
+            yield currentChunk |> Seq.toList |> Seq.ofList
+        else ()
+    }
+        
