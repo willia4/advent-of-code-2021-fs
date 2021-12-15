@@ -33,6 +33,19 @@ let toArray (matrix: Matrix<'a>) =
         
     rows
 
+let fillMatrix width height value: Matrix<'a> =
+    [0..height]
+    |> List.map (fun _ -> [0..width] |> List.map (fun _ -> value) |> List.toSeq) |> List.toSeq
+    |> fromSeq
+    
+let takeRows count (matrix: Matrix<'a>): Matrix<'a> =
+    let rows = Seq.take count matrix
+    ImmutableArray.Empty.AddRange(rows)
+    
+let skipRows count (matrix: Matrix<'a>): Matrix<'a> =
+    let rows = Seq.skip count matrix
+    ImmutableArray.Empty.AddRange(rows)
+
 let toSeqWithCoords (matrix: Matrix<'a>) = seq {
     let rowCount = matrix.Length
     let colCount = if matrix.Length > 0 then matrix[0].Length else 0
@@ -71,3 +84,21 @@ let toString (sep: string) (format: 'a -> string) (matrix: Matrix<'a>) =
 
     sb.ToString()
     
+let height (matrix: Matrix<'a>) = matrix.Length
+
+let width (matrix: Matrix<'a>) = matrix[0].Length
+
+let columns (matrix: Matrix<'a>): seq<seq<'a>> =
+    let column n (matrix: Matrix<'a>) = seq {
+        for y in [0..(matrix.Length - 1)] do
+            yield matrix[y][n]
+    }
+    
+    seq {
+        let colCount = matrix[0].Length
+        for x in [0..(colCount - 1)] do
+            yield column x matrix
+    }
+
+let transpose (matrix: Matrix<'a>): Matrix<'a> =
+   matrix |> columns |> fromSeq

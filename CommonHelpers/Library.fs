@@ -42,3 +42,21 @@ module Helpers =
             yield i
             i <- i + 1
     }
+    
+    let chunkBySeparator (isSep: 'a -> bool) (items: 'a seq): seq<seq<'a>> = seq {
+        let currentChunk = new ResizeArray<'a>()
+        
+        for i in items do
+            if isSep i then
+                if currentChunk.Count > 0 then
+                    yield (currentChunk |> Seq.toList)
+                    currentChunk.Clear()
+                else ()
+            else
+                currentChunk.Add(i)
+                
+        if currentChunk.Count > 0 then
+            yield (currentChunk |> Seq.toList)
+        else ()
+    }
+        
