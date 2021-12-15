@@ -55,6 +55,13 @@ let toSeqWithCoords (matrix: Matrix<'a>) = seq {
             yield (x, y, matrix[y][x])
 }
 
+let allCoordinates (matrix: Matrix<'a>) =
+    matrix
+    |> toSeqWithCoords
+    |> Seq.map (fun t ->
+        let x, y, _ = t
+        (x, y))
+
 let map fn (matrix: Matrix<'a>) =
     matrix
     |> Seq.map (fun row -> row |> Seq.map fn |> seqToImmutableArray)
@@ -73,6 +80,20 @@ let mapWithCoords fn (matrix: Matrix<'a>) =
     
     mapped |> fromArray
 
+let toStringWithCoords (sep: string) (format: int*int -> 'a -> string) (matrix: Matrix<'a>) =
+    let sb = System.Text.StringBuilder()
+    
+    for y in [0..matrix.Length - 1] do
+        let rowStrings = seq {
+            for x in [0..matrix[y].Length - 1] do
+                yield (format (x, y) ((matrix[y])[x]))
+        }
+        
+        let rowString = rowStrings |> String.concat sep
+        sb.AppendLine(rowString) |> ignore
+
+    sb.ToString()
+    
 let toString (sep: string) (format: 'a -> string) (matrix: Matrix<'a>) =
     let sb = System.Text.StringBuilder()
     
