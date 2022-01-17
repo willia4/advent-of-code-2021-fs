@@ -24,26 +24,27 @@ let PacketHeaderLength = 3 + 3
 
 let decodeHexDigit hexDigit = System.Int32.Parse(hexDigit, System.Globalization.NumberStyles.HexNumber)
 let intToBits i =
-    [
+    [|
         (i &&& 0b1000 >>> 3) |> byte
         (i &&& 0b0100 >>> 2) |> byte
         (i &&& 0b0010 >>> 1) |> byte
         (i &&& 0b0001 >>> 0) |> byte
-    ]
+    |]
     
 let hexStringToBits hexString =
     hexString
     |> Helpers.charStrings
     |> Seq.map decodeHexDigit
     |> Seq.collect intToBits
+    |> Seq.toArray
     
 let bitStringToString (bits: seq<byte>) =
     bits
     |> Seq.map (fun b -> if b = (byte 1) then "1" else "0")
     |> String.concat ""
 
-let bitStringToInt (bits: seq<byte>) =
-    let reversed = bits |> Seq.rev |> Seq.toArray
+let bitStringToInt (bits: array<byte>) =
+    let reversed = bits |> Array.rev
     
     let mutable r = 0uL
     for i = 0 to (reversed.Length - 1) do
@@ -62,25 +63,25 @@ let intToPacketType (i: uint64) =
     | 7uL -> PacketType.EqualTo
     | _ -> raise (OperationError($"Invalid packet type {i}"))
 
-let decodePacketHeader (bits: seq<byte>) =
-    let versionBits = bits |> Seq.take 3
-    let typeBits = bits |> Seq.skip 3 |> Seq.take 3
+let decodePacketHeader (bits: array<byte>) =
+    let versionBits = bits |> Array.take 3
+    let typeBits = bits |> Array.skip 3 |> Array.take 3
     { Version = (bitStringToInt versionBits); Type = (typeBits |> bitStringToInt |> intToPacketType) }
 
     
-let decodeOperatorPacketType (bits: seq<byte>) =
-    match (bits |> Seq.skip PacketHeaderLength |> Seq.item 0) with
+let decodeOperatorPacketType (bits: array<byte>) =
+    match (bits |> Array.skip PacketHeaderLength |> Array.item 0) with
     | 0uy -> PacketContainerType.BitLength
     | _ -> PacketContainerType.PacketLength
 
     
-let rec decodePacket (bits: seq<byte>) =
+let rec decodePacket (bits: array<byte>) =
     let header = decodePacketHeader bits
     match header.Type with
     | LiteralValue -> decodeLiteralValuePacket bits
     | _ -> decodeOperatorPacket bits
     
-and decodeLiteralValuePacket (bits: seq<byte>) =
+and decodeLiteralValuePacket (bits: array<byte>) =
     let header = decodePacketHeader bits
     let bits = bits |> Seq.skip (PacketHeaderLength |> int)
     
@@ -91,61 +92,98 @@ and decodeLiteralValuePacket (bits: seq<byte>) =
     let valueBits = valueChunks
                     |> Seq.map (Seq.skip 1)
                     |> Seq.collect id
+                    |> Seq.toArray
     
     let packetLength = PacketHeaderLength + ((valueChunks |> Seq.length)  * 5)
     
     (packetLength |> uint64, ValuePacket(header = header, value = (bitStringToInt valueBits)))
     
-and decodeOperatorPacket (bits: seq<byte>) =
+and decodeOperatorPacket (bits: array<byte>) =
     let header = decodePacketHeader bits
     let operatorPacketType = decodeOperatorPacketType bits
-    let (subPacketLengths, subPackets) = decodeSubPackets operatorPacketType (bits |> Seq.skip (PacketHeaderLength + 1))
+    let (subPacketLengths, subPackets) = decodeSubPackets operatorPacketType (bits |> Array.skip (PacketHeaderLength + 1))
     
     ((uint64 PacketHeaderLength) + 1uL + subPacketLengths, OperatorPacket(header = header, subPackets = subPackets))
     
 // bits should not contain the header or length type id bits of the parent packet
-and decodeSubPackets operatorPacketType (bits: seq<byte>) : uint64 * seq<Packet> =
+and decodeSubPackets operatorPacketType (bits: array<byte>) : uint64 * array<Packet> =
     match operatorPacketType with
     | PacketContainerType.BitLength -> decodeBitLengthSubPackets bits
     | PacketContainerType.PacketLength -> decodePacketLengthSubPackets bits
 
 // bits should not contain the header or length type id bits of the parent packet
-and decodeBitLengthSubPackets (bits: seq<byte>) = 
-    let subPacketsLength = bits |> Seq.take 15 |> bitStringToInt
-    let subPacketBits = bits |> Seq.skip 15 |> Seq.take (int subPacketsLength)
-    
-    let packetsAndLengths = seq {
-        let mutable subPacketBits = subPacketBits
-        while (subPacketBits |> (Seq.isEmpty >> not)) do
-            let (nextLength, nextPacket) = decodePacket(subPacketBits)
-            subPacketBits <- subPacketBits |> Seq.skip (int nextLength)
+and decodeBitLengthSubPackets (bits: array<byte>) =
+    let slowVersion bits =
+        let subPacketsLength = bits |> Array.take 15 |> bitStringToInt
+        let subPacketBits = bits |> Array.skip 15 |> Array.take (int subPacketsLength)
         
-            yield (nextLength, nextPacket)
-    }
-    
-    let totalLength = 15uL + (packetsAndLengths |> Seq.map fst |> Seq.sum)
-    let packets = packetsAndLengths |> Seq.map snd
+        let packetsAndLengths = seq {
+            let mutable subPacketBits = subPacketBits
+            while (subPacketBits |> (Seq.isEmpty >> not)) do
+                let (nextLength, nextPacket) = decodePacket(subPacketBits)
+                subPacketBits <- subPacketBits |> Array.skip (int nextLength)
+            
+                yield (nextLength, nextPacket)
+        }
+        
+        let totalLength = 15uL + (packetsAndLengths |> Seq.map fst |> Seq.sum)
+        let packets = packetsAndLengths |> Seq.map snd |> Seq.toArray
 
-    (totalLength, packets)
+        (totalLength, packets)
+        
+    let fastVersion bits =
+        let subPacketsLength = bits |> Array.take 15 |> bitStringToInt
+        let mutable subPacketBits = bits |> Array.skip 15 |> Array.take (int subPacketsLength)
+        
+        let mutable totalLength = 15uL
+        let packets = System.Collections.Generic.List<Packet>()
+        while (subPacketBits |> (Array.isEmpty >> not)) do
+            let (nextLength, nextPacket) = decodePacket(subPacketBits)
+            subPacketBits <- subPacketBits |> Array.skip (int nextLength)
+            
+            totalLength <- totalLength + nextLength
+            packets.Add(nextPacket)
+
+        (totalLength, packets.ToArray())
+        
+    //slowVersion bits
+    fastVersion bits
 
 // bits should not contain the header or length type id bits of the parent packet
-and decodePacketLengthSubPackets (bits: seq<byte>) : uint64 * seq<Packet> =
-    let subPacketCount = bits |> Seq.take 11 |> bitStringToInt |> int
-    let subPacketBits = bits |> Seq.skip 11
+and decodePacketLengthSubPackets (bits: array<byte>) =
+    let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
+    let subPacketBits = bits |> Array.skip 11
     
-    let packetsAndLengths = seq {
-        let mutable subPacketBits = subPacketBits
+    let slowVersion bits =
+        let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
+        let subPacketBits = bits |> Array.skip 11
+        let packetsAndLengths = seq {
+            let mutable subPacketBits = subPacketBits
+            for i = 1 to subPacketCount do
+                let (nextLength, nextPacket) = decodePacket(subPacketBits)
+                subPacketBits <- subPacketBits |> Array.skip (int nextLength)
+                
+                yield (nextLength, nextPacket)
+        }
+        let totalLength = 11uL + (packetsAndLengths |> Seq.map fst |> Seq.sum)
+        let packets = packetsAndLengths |> Seq.map snd |> Seq.toArray
+        (totalLength, packets)
+
+    let fastVersion bits =
+        let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
+        let mutable subPacketBits = bits |> Array.skip 11
+        let mutable totalLength = 11uL
+        
+        let packets = System.Collections.Generic.List<Packet>()
         for i = 1 to subPacketCount do
-            let (nextLength, nextPacket) = decodePacket(subPacketBits)
-            subPacketBits <- subPacketBits |> Seq.skip (int nextLength)
-            
-            yield (nextLength, nextPacket)
-    }
-
-    let totalLength = 11uL + (packetsAndLengths |> Seq.map fst |> Seq.sum)
-    let packets = packetsAndLengths |> Seq.map snd
-
-    (totalLength, packets)
+            let (nextLength, nextPacket) = decodePacket subPacketBits
+            subPacketBits <- subPacketBits |> Array.skip (int nextLength)
+            totalLength <- totalLength + nextLength
+            packets.Add(nextPacket)
+        (totalLength, packets.ToArray())
+      
+    //slowVersion bits  
+    fastVersion bits
     
 let rec versionSum (packet: Packet) =
     match packet with
