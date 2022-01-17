@@ -76,3 +76,15 @@ module Helpers =
         else ()
     }
         
+    // like "Seq.takeWhile" except that the output sequence includes  the first item that yielded false
+    let takeUntil (f: 'a -> bool) (items: 'a seq) = seq {
+        let mutable hadFailure = false
+        for i in items do
+            if (hadFailure = false) then
+                yield i
+                hadFailure <- hadFailure || (f i)
+            else ()
+    }
+        
+    let sumUnsignedLong (s: seq<uint64>) =
+        s |> Seq.reduce (fun a b -> a + b)
