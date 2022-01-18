@@ -131,6 +131,24 @@ and decodeBitLengthSubPackets (bits: array<byte>) =
 
         (totalLength, packets)
         
+    let recursiveVersion bits =
+        let subPacketsLength = bits |> Array.take 15 |> bitStringToInt
+        let subPacketBits = bits |> Array.skip 15 |> Array.take (int subPacketsLength)
+        
+        let rec inner remainingBits (acc: uint64 * array<Packet>) =
+            if (Array.isEmpty remainingBits) then
+                acc
+            else
+                let (previousLength, previousPackets) = acc
+                let (nextLength, nextPacket) = decodePacket remainingBits
+                let newBits = remainingBits |> Array.skip (int nextLength)
+                let newLength = previousLength + nextLength
+                let newPackets = Array.append previousPackets [| nextPacket |]
+                
+                inner newBits (newLength, newPackets)
+
+        inner subPacketBits (15uL, [||])
+            
     let fastVersion bits =
         let subPacketsLength = bits |> Array.take 15 |> bitStringToInt
         let mutable subPacketBits = bits |> Array.skip 15 |> Array.take (int subPacketsLength)
@@ -147,13 +165,11 @@ and decodeBitLengthSubPackets (bits: array<byte>) =
         (totalLength, packets.ToArray())
         
     //slowVersion bits
-    fastVersion bits
+    //fastVersion bits
+    recursiveVersion bits
 
 // bits should not contain the header or length type id bits of the parent packet
 and decodePacketLengthSubPackets (bits: array<byte>) =
-    let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
-    let subPacketBits = bits |> Array.skip 11
-    
     let slowVersion bits =
         let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
         let subPacketBits = bits |> Array.skip 11
@@ -169,6 +185,24 @@ and decodePacketLengthSubPackets (bits: array<byte>) =
         let packets = packetsAndLengths |> Seq.map snd |> Seq.toArray
         (totalLength, packets)
 
+    let recursiveVersion bits =
+        let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
+        let subPacketBits = bits |> Array.skip 11
+        
+        let rec inner remainingCount remainingBits (acc: uint64 * array<Packet>) =
+            if remainingCount = 0 then
+                acc
+            else    
+                let (previousLength, previousPackets) = acc
+                let (nextLength, nextPacket) = decodePacket remainingBits
+                let newBits = remainingBits |> Array.skip (int nextLength)
+                let newLength = previousLength + nextLength
+                let newPackets = Array.append previousPackets [| nextPacket |]
+
+                inner (remainingCount - 1) newBits (newLength, newPackets)
+
+        inner subPacketCount subPacketBits (11uL, [||])
+
     let fastVersion bits =
         let subPacketCount = bits |> Array.take 11 |> bitStringToInt |> int
         let mutable subPacketBits = bits |> Array.skip 11
@@ -183,7 +217,8 @@ and decodePacketLengthSubPackets (bits: array<byte>) =
         (totalLength, packets.ToArray())
       
     //slowVersion bits  
-    fastVersion bits
+    //fastVersion bits
+    recursiveVersion bits
     
 let rec versionSum (packet: Packet) =
     match packet with
